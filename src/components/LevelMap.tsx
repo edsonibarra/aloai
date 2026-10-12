@@ -6,14 +6,15 @@ import { AloSpeech } from "./AloSpeech";
 import { CuratedBadge } from "./CuratedBadge";
 
 export type MapNode =
-  | { id: number; status: "unlocked" | "completed"; title: string; tagline: string }
+  | { id: number; status: "unlocked" | "completed"; title: string; tagline: string; pro: boolean }
   | { id: number; status: "locked" };
 
 const X = [50, 22, 50, 78, 50]; // horizontal position (%) of each node along the winding path
 const ROW = 190;
 
-export function LevelMap({ nodes, name }: { nodes: MapNode[]; name: string }) {
+export function LevelMap({ nodes, name, passAvailable }: { nodes: MapNode[]; name: string; passAvailable: boolean }) {
   const current = nodes.find((n) => n.status === "unlocked");
+  const currentIsPro = current?.status === "unlocked" && current.pro;
   const allDone = nodes.every((n) => n.status === "completed");
   const height = nodes.length * ROW;
   const pts = nodes.map((_, i) => ({ x: X[i % X.length], y: i * ROW + ROW / 2 }));
@@ -32,12 +33,21 @@ export function LevelMap({ nodes, name }: { nodes: MapNode[]; name: string }) {
       <AloSpeech
         size={110}
         mood={allDone ? "happy" : "idle"}
+        footer={
+          currentIsPro && passAvailable ? (
+            <Link href="/pricing" className="btn btn-primary">
+              Unlock with the Interview Pass
+            </Link>
+          ) : undefined
+        }
         text={
           allDone
             ? `${name}, you've cleared every level! You've worked through the full senior Python gauntlet curated by expert engineers. Walk into that interview like you own it.`
-            : current && current.status !== "locked"
-              ? `Welcome to the map, ${name}! Level ${current.id}, ${current.title}, is open and waiting. Clear it with at least 6 of 8 correct to unseal the next one. Every question you pass earns credits.`
-              : `Welcome back, ${name}! Pick a level to continue.`
+            : current && current.status !== "locked" && currentIsPro
+              ? `Great work, ${name}! You've cleared your free level. Level ${current.id}, ${current.title}, is next. Grab the Interview Pass to unlock it and every remaining level, all curated by expert Python software engineers.`
+              : current && current.status !== "locked"
+                ? `Welcome to the map, ${name}! Level ${current.id}, ${current.title}, is open and waiting. Clear it with at least 6 of 8 correct to unseal the next one. Every question you pass earns credits.`
+                : `Welcome back, ${name}! Pick a level to continue.`
         }
       />
 
@@ -117,6 +127,7 @@ function LevelNode({ node, index, isCurrent }: { node: MapNode; index: number; i
   }
 
   const done = node.status === "completed";
+  if (node.pro) return <ProNode node={node} appear={appear} done={done} isCurrent={isCurrent} />;
   return (
     <motion.div {...appear} className="flex flex-col items-center">
       <Link
@@ -163,6 +174,56 @@ function LevelNode({ node, index, isCurrent }: { node: MapNode; index: number; i
         <div className="font-display text-base font-bold leading-tight">{node.title}</div>
         <div className={`mt-0.5 text-xs font-semibold uppercase tracking-wider ${done ? "text-green" : "text-gold"}`}>
           {done ? "Cleared · replay" : "Play"}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ProNode({
+  node,
+  appear,
+  done,
+  isCurrent,
+}: {
+  node: Extract<MapNode, { status: "unlocked" | "completed" }>;
+  appear: Record<string, unknown>;
+  done: boolean;
+  isCurrent: boolean;
+}) {
+  return (
+    <motion.div {...appear} className="flex flex-col items-center">
+      <Link
+        href={`/pricing?level=${node.id}`}
+        className="focus-ring group relative block rounded-[1.75rem]"
+        aria-label={`Level ${node.id}: ${node.title}. Unlock with the Interview Pass`}
+      >
+        {isCurrent && (
+          <motion.span
+            aria-hidden
+            className="absolute inset-0 rounded-[1.75rem] border-2 border-pink"
+            animate={{ scale: [1, 1.4], opacity: [0.9, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+          />
+        )}
+        <motion.div
+          whileHover={{ y: -4, scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative grid h-28 w-28 place-items-center rounded-[1.75rem] border-2 border-pink/70 bg-gradient-to-b from-[#3b1d5e] to-[#1d1040] font-display text-ink shadow-[inset_0_-7px_0_rgba(0,0,0,0.3),0_0_36px_-6px_rgba(255,95,162,0.7)]"
+        >
+          <div className="text-center leading-none">
+            <div className="text-[0.65rem] font-bold uppercase tracking-widest opacity-80">Level</div>
+            <div className="text-5xl font-bold">{node.id}</div>
+          </div>
+          <span className="absolute -right-3 -top-3 rounded-full border-2 border-bg bg-gradient-to-r from-pink to-violet px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider text-white shadow-[0_0_14px_rgba(255,95,162,0.7)]">
+            Pro
+          </span>
+        </motion.div>
+      </Link>
+      <div className="mt-3 w-44 rounded-xl bg-bg/75 px-2 py-1 text-center backdrop-blur-sm">
+        <div className="font-display text-base font-bold leading-tight">{node.title}</div>
+        <div className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-pink">
+          {done ? "Cleared · Pass to replay" : "Unlock with Pass"}
         </div>
       </div>
     </motion.div>

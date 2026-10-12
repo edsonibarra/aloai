@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getLevel, LEVEL_COUNT } from "@/lib/content";
-import { canAccessLevel } from "@/lib/progress";
+import { getLevelAccess, paywallFor } from "@/lib/progress";
 import { CREDITS_PER_LEVEL, CREDITS_PER_QUESTION, PASS_THRESHOLD, type AttemptAnswers } from "@/lib/game";
 
 const schema = z.object({
@@ -18,8 +18,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ level: 
 
   const levelId = Number((await params).level);
   const level = getLevel(levelId);
-  if (!level || !(await canAccessLevel(user.id, levelId))) {
-    return NextResponse.json({ error: "Level locked" }, { status: 403 });
+  const access = level ? await getLevelAccess(user, levelId) : "locked";
+  if (!level || access === "locked") return NextResponse.json({ error: "Level locked" }, { status: 403 });
+  if (access === "paywalled") {
+    return NextResponse.json({ error: "This level needs the Interview Pass" }, { status: 402 });
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -114,5 +116,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ level: 
   });
 
   if ("error" in result) return NextResponse.json(result, { status: 409 });
+  if (result.levelResult?.unlockedLevel) {
+    const allowed = await paywallFor(user);
+    return NextResponse.json({
+      ...result,
+      levelResult: { ...result.levelResult, nextPlayable: allowed(result.levelResult.unlockedLevel) },
+    });
+  }
   return NextResponse.json(result);
 }

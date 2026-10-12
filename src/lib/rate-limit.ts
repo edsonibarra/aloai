@@ -8,6 +8,7 @@ export const LIMITS = {
   login: { max: 10, windowSeconds: 15 * 60 }, // per IP + email
   signup: { max: 5, windowSeconds: 60 * 60 }, // per IP
   alo: { max: 120, windowSeconds: 60 * 60 }, // Claude calls per user
+  checkout: { max: 10, windowSeconds: 60 * 60 }, // Stripe Checkout sessions per user
 } satisfies Record<string, Limit>;
 
 /**

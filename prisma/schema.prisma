@@ -9,17 +9,19 @@ datasource db {
 }
 
 model User {
-  id            String           @id @default(cuid())
-  email         String           @unique
-  name          String
-  passwordHash  String
-  credits       Int              @default(0)
-  placementDone Boolean          @default(false)
-  startLevel    Int?
-  createdAt     DateTime         @default(now())
-  levels        LevelProgress[]
-  attempts      LevelAttempt[]
-  questionWins  QuestionCredit[]
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  passwordHash     String
+  credits          Int              @default(0)
+  placementDone    Boolean          @default(false)
+  startLevel       Int?
+  stripeCustomerId String?          @unique
+  createdAt        DateTime         @default(now())
+  levels           LevelProgress[]
+  attempts         LevelAttempt[]
+  questionWins     QuestionCredit[]
+  purchases        Purchase[]
 }
 
 // One row per level the user has unlocked. A missing row means the level is locked.
@@ -79,4 +81,27 @@ model RateLimit {
   key         String   @id
   windowStart DateTime
   count       Int
+}
+
+// One-time Interview Pass purchases. A user has the pass while any row is "paid".
+model Purchase {
+  id                String   @id @default(cuid())
+  userId            String
+  checkoutSessionId String   @unique
+  paymentIntentId   String?  @unique
+  amount            Int // in the smallest currency unit
+  currency          String
+  status            String // "paid" | "refunded"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+// Stripe webhook events already processed, so retries are never applied twice.
+model StripeEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now())
 }

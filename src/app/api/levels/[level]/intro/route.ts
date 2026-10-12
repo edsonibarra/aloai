@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getLevel } from "@/lib/content";
-import { canAccessLevel } from "@/lib/progress";
+import { getLevelAccess } from "@/lib/progress";
 import { generateLevelIntro } from "@/lib/alo";
 import { consume, LIMITS } from "@/lib/rate-limit";
 
@@ -12,8 +12,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ level: 
 
   const levelId = Number((await params).level);
   const level = getLevel(levelId);
-  if (!level || !(await canAccessLevel(user.id, levelId))) {
-    return NextResponse.json({ error: "Level locked" }, { status: 403 });
+  const access = level ? await getLevelAccess(user, levelId) : "locked";
+  if (!level || access === "locked") return NextResponse.json({ error: "Level locked" }, { status: 403 });
+  if (access === "paywalled") {
+    return NextResponse.json({ error: "This level needs the Interview Pass" }, { status: 402 });
   }
 
   const cached = await prisma.aloIntroCache.findUnique({ where: { level: levelId } });

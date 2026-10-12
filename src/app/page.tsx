@@ -46,6 +46,9 @@ export default async function Landing() {
             </Link>
           ) : (
             <>
+              <Link href="/pricing" className="focus-ring hidden rounded-lg px-3 py-2 text-sm font-semibold text-muted hover:text-ink sm:inline">
+                Pricing
+              </Link>
               <Link href="/login" className="focus-ring rounded-lg px-3 py-2 text-sm font-semibold text-muted hover:text-ink">
                 Log in
               </Link>
@@ -170,7 +173,12 @@ export default async function Landing() {
           <h2 className="mt-6 font-display text-4xl font-bold sm:text-5xl">
             Your next interview is a <span className="text-gold-gradient">boss level</span>.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted">Train for it with questions from the engineers who ask them.</p>
+          <p className="mx-auto mt-4 max-w-xl text-muted">
+            Train for it with questions from the engineers who ask them. Your placement test and starting level are free.{" "}
+            <Link href="/pricing" className="focus-ring rounded font-semibold text-gold hover:underline">
+              See pricing
+            </Link>
+          </p>
           <Link href={signedIn ? "/map" : "/signup"} className="btn btn-primary mt-8 text-base">
             {signedIn ? "Back to the map" : "Create free account"}
           </Link>
@@ -178,7 +186,14 @@ export default async function Landing() {
       </section>
 
       <footer className="border-t border-line/60 py-6 text-center text-sm text-muted">
-        © {new Date().getFullYear()} AloAI · Questions curated by expert Python software engineers
+        © {new Date().getFullYear()} AloAI · Questions curated by expert Python software engineers ·{" "}
+        <Link href="/pricing" className="focus-ring rounded hover:text-ink">
+          Pricing
+        </Link>{" "}
+        ·{" "}
+        <Link href="/terms" className="focus-ring rounded hover:text-ink">
+          Terms
+        </Link>
       </footer>
     </div>
   );

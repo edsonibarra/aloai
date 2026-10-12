@@ -52,6 +52,31 @@ If Claude is unavailable (no key, a network error, a refusal, or the user's hour
 - **Security headers** (`next.config.ts`): CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, Referrer-Policy and Permissions-Policy.
 - **Sessions:** httpOnly, `SameSite=Lax` cookies, marked `Secure` in production.
 
+## Payments (Stripe)
+
+The placement test and each user's **starting level** are free. A one-time **Interview Pass** unlocks every other level. Credits are game rewards only; they can't be bought.
+
+**Billing stays off until `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` are all set.** While it's off, every unlocked level stays playable and the pricing page shows "Coming soon".
+
+**Setup**
+1. **Create the product:** in the Stripe Dashboard, create a product "Interview Pass" with a one-time price. Copy the price ID (`price_...`) into `STRIPE_PRICE_ID`. To change the price later, update it in Stripe; the app re-reads it within an hour.
+2. **Add the webhook:** under *Developers → Webhooks*, add an endpoint at `https://<your-domain>/api/billing/webhook`. Subscribe it to:
+   - `checkout.session.completed`
+   - `checkout.session.async_payment_succeeded`
+   - `charge.refunded`
+
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+3. **Set the keys:** `STRIPE_SECRET_KEY`, plus `APP_URL` (your public URL) and `SUPPORT_EMAIL`. Use test keys on Preview and live keys on Production.
+4. **Enable customer emails:** under *Settings → Customer emails*, turn on successful payments so buyers get receipts. Also save the default *Customer Portal* configuration so the in-app **Billing** link works.
+5. **Test locally:** use the Stripe CLI, `stripe listen --forward-to localhost:3000/api/billing/webhook`, with test card `4242 4242 4242 4242`.
+
+**How access works**
+- **Only the webhook grants the Pass.** It records each Stripe event in the same transaction as its effect, so retries are no-ops. The success page only waits for that confirmation.
+- **Refunds:** a full refund revokes the Pass; a partial refund keeps it.
+- **Server-side checks:** every level page and level API checks both locks, progress and paywall (`src/lib/progress.ts`). Paywalled levels return `402` and redirect to `/pricing`.
+
+**Before going live:** review `/terms` (refund window, service description) with whoever handles your legal and business terms.
+
 ## How it works
 
 | Route | What it does |
@@ -59,7 +84,10 @@ If Claude is unavailable (no key, a network error, a refusal, or the user's hour
 | `/` | Animated landing page: Alo, the "curated by expert Python software engineers" message, a playable warm-up question, a level-path teaser, sign-up/log-in calls to action |
 | `/signup`, `/login` | Authentication |
 | `/placement` | 10-question placement test, 2 questions per level. Can only be taken once |
-| `/map` | Level map: cleared, current and sealed levels, plus the credit HUD |
+| `/map` | Level map: cleared, current, Pro (needs the Pass) and sealed levels, plus the credit HUD |
+| `/pricing` | Free vs. Interview Pass; starts Stripe Checkout |
+| `/billing/success` | Waits for the webhook, then plays the Pass-unlock moment |
+| `/terms` | Terms and refund policy |
 | `/level/[n]` | Alo's "why this level matters" briefing, 8 questions with Alo's feedback, reward moments and the level result |
 
 **Game rules** (in `src/lib/game.ts`)
