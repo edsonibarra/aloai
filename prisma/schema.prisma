@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String
+  passwordHash  String
+  credits       Int             @default(0)
+  placementDone Boolean         @default(false)
+  startLevel    Int?
+  createdAt     DateTime        @default(now())
+  levels        LevelProgress[]
+  attempts      LevelAttempt[]
+  questionWins  QuestionCredit[]
+}
+
+// One row per level the user has unlocked. A missing row means the level is locked.
+model LevelProgress {
+  id        String  @id @default(cuid())
+  userId    String
+  level     Int
+  status    String  // "unlocked" | "completed"
+  bestScore Int     @default(0)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, level])
+}
+
+// A single run through a level's questions.
+model LevelAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  level     Int
+  answers   String   @default("{}") // JSON: { [questionId]: { choice, correct } }
+  finished  Boolean  @default(false)
+  passed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Records the first time a user passes a question, so credits are only awarded once.
+model QuestionCredit {
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+}
+
+// Alo's "why this level matters" intro, generated once per level by Claude.
+model AloIntroCache {
+  level     Int      @id
+  text      String
+  createdAt DateTime @default(now())
+}

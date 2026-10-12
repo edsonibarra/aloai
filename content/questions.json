@@ -1,0 +1,745 @@
+{
+  "levels": [
+    {
+      "id": 1,
+      "title": "Core Semantics",
+      "tagline": "Names, objects and the rules that surprise mid-level devs",
+      "topics": [
+        "mutability and aliasing",
+        "default arguments",
+        "scoping (LEGB)",
+        "truthiness and short-circuiting",
+        "numeric semantics",
+        "hash/equality of keys"
+      ],
+      "questions": [
+        {
+          "id": "l1-q1",
+          "prompt": "What does this print?",
+          "code": "def add(x, acc=[]):\n    acc.append(x)\n    return acc\n\nadd(1)\nprint(add(2))",
+          "options": [
+            "[2]",
+            "[1, 2]",
+            "[[1], 2]",
+            "TypeError"
+          ],
+          "answer": 1,
+          "explanation": "Default argument values are evaluated once, when the function is defined. Every call that omits `acc` shares the same list object. The idiom is `acc=None` and then `if acc is None: acc = []`."
+        },
+        {
+          "id": "l1-q2",
+          "prompt": "What does this print?",
+          "code": "fns = [lambda: i for i in range(3)]\nprint([f() for f in fns])",
+          "options": [
+            "[0, 1, 2]",
+            "NameError",
+            "[0, 0, 0]",
+            "[2, 2, 2]"
+          ],
+          "answer": 3,
+          "explanation": "Closures capture variables, not values (late binding). All three lambdas look up the same `i` when called, after the comprehension has finished, so `i` is 2. Bind it eagerly with `lambda i=i: i`."
+        },
+        {
+          "id": "l1-q3",
+          "prompt": "What is the value of `t` after this code runs?",
+          "code": "t = ([1],)\ntry:\n    t[0] += [2]\nexcept TypeError:\n    pass\nprint(t)",
+          "options": [
+            "([1],)",
+            "The except block never runs",
+            "([1], [2])",
+            "([1, 2],)"
+          ],
+          "answer": 3,
+          "explanation": "`t[0] += [2]` first calls `list.__iadd__`, which mutates the list in place, then tries to assign the result back into the tuple, which raises TypeError. The mutation already happened, so `t` is `([1, 2],)` even though an exception was raised."
+        },
+        {
+          "id": "l1-q4",
+          "prompt": "What happens when `f()` is called?",
+          "code": "x = 10\n\ndef f():\n    print(x)\n    x = 20\n\nf()",
+          "options": [
+            "Prints 10",
+            "Prints 20",
+            "SyntaxError",
+            "UnboundLocalError"
+          ],
+          "answer": 3,
+          "explanation": "Scope is decided at compile time. Because `x` is assigned somewhere in `f`, it is local throughout the whole function body, so `print(x)` reads a local that has not been bound yet. Use `global x` (or better, avoid the shadowing)."
+        },
+        {
+          "id": "l1-q5",
+          "prompt": "What does this print?",
+          "code": "print(0 or [] or \"a\" and None)",
+          "options": [
+            "None",
+            "a",
+            "[]",
+            "False"
+          ],
+          "answer": 0,
+          "explanation": "`and` binds tighter than `or`, so this is `0 or [] or (\"a\" and None)`. `\"a\" and None` evaluates to `None`. `or` returns the first truthy operand or else the last operand, which is `None`. Boolean operators return operands, not booleans."
+        },
+        {
+          "id": "l1-q6",
+          "prompt": "What does this print?",
+          "code": "print(False == False in [False])",
+          "options": [
+            "False",
+            "True",
+            "TypeError",
+            "[True]"
+          ],
+          "answer": 1,
+          "explanation": "`==` and `in` are both comparison operators, so they chain: `(False == False) and (False in [False])`, which is `True and True`. Chained comparisons are a classic source of subtle bugs."
+        },
+        {
+          "id": "l1-q7",
+          "prompt": "What does this print?",
+          "code": "print(round(2.5), round(3.5))",
+          "options": [
+            "3 4",
+            "2 3",
+            "2 4",
+            "3 3"
+          ],
+          "answer": 2,
+          "explanation": "Python 3's `round` uses round-half-to-even (banker's rounding), so ties go to the nearest even integer: 2.5 rounds to 2 and 3.5 rounds to 4. For financial code, use `decimal.Decimal` with an explicit rounding mode."
+        },
+        {
+          "id": "l1-q8",
+          "prompt": "What does this print?",
+          "code": "d = {1: 'a', True: 'b', 1.0: 'c'}\nprint(d)",
+          "options": [
+            "{1: 'a', True: 'b', 1.0: 'c'}",
+            "{1: 'c'}",
+            "{True: 'c'}",
+            "{1.0: 'c'}"
+          ],
+          "answer": 1,
+          "explanation": "`1`, `True` and `1.0` are equal and hash the same, so they are the same dict key. The first key object inserted (`1`) is kept, and each later assignment overwrites only the value. The result is `{1: 'c'}`."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Data Model & Idioms",
+      "tagline": "Dunder methods, descriptors and the object protocol",
+      "topics": [
+        "__eq__ / __hash__ contract",
+        "__slots__",
+        "descriptors and properties",
+        "method resolution order",
+        "iterators and generators",
+        "dataclasses",
+        "context managers"
+      ],
+      "questions": [
+        {
+          "id": "l2-q1",
+          "prompt": "What happens on the last line?",
+          "code": "class Point:\n    def __init__(self, x):\n        self.x = x\n    def __eq__(self, other):\n        return self.x == other.x\n\ns = {Point(1)}",
+          "options": [
+            "A set with one Point is created",
+            "TypeError: Point instances are unhashable",
+            "The set is empty",
+            "AttributeError"
+          ],
+          "answer": 1,
+          "explanation": "Defining `__eq__` without `__hash__` sets `__hash__` to `None`, which makes instances unhashable. That is deliberate: objects that compare equal must hash equal. Define `__hash__` consistently (for example `hash(self.x)`) or use a frozen dataclass."
+        },
+        {
+          "id": "l2-q2",
+          "prompt": "What does this print?",
+          "code": "class C:\n    @property\n    def x(self):\n        return \"prop\"\n\nc = C()\nc.__dict__['x'] = \"inst\"\nprint(c.x)",
+          "options": [
+            "prop",
+            "inst",
+            "AttributeError",
+            "None"
+          ],
+          "answer": 0,
+          "explanation": "`property` is a data descriptor (it defines `__set__`), and data descriptors on the class take precedence over the instance `__dict__`. Non-data descriptors such as plain functions are overridden by instance attributes."
+        },
+        {
+          "id": "l2-q3",
+          "prompt": "What does `D().who()` return?",
+          "code": "class A:\n    def who(self): return \"A\"\nclass B(A):\n    def who(self): return \"B\" + super().who()\nclass C(A):\n    def who(self): return \"C\" + super().who()\nclass D(B, C):\n    def who(self): return \"D\" + super().who()",
+          "options": [
+            "DBA",
+            "DBACA",
+            "DCBA",
+            "DBCA"
+          ],
+          "answer": 3,
+          "explanation": "`super()` follows the MRO of the instance's class, not the parent of the class where the call appears. `D.__mro__` is D, B, C, A, object (C3 linearization), so B's `super()` goes to C. This is what makes cooperative multiple inheritance work."
+        },
+        {
+          "id": "l2-q4",
+          "prompt": "What does this print?",
+          "code": "g = (x * x for x in range(3))\nprint(sum(g), sum(g))",
+          "options": [
+            "5 5",
+            "5 0",
+            "0 5",
+            "TypeError"
+          ],
+          "answer": 1,
+          "explanation": "A generator is a single-pass iterator. The first `sum` exhausts it (0 + 1 + 4 = 5), and the second sees no items and returns 0. If you need multiple passes, materialise the data or use a re-iterable object whose `__iter__` returns a fresh iterator."
+        },
+        {
+          "id": "l2-q5",
+          "prompt": "What happens when this module is imported?",
+          "code": "from dataclasses import dataclass\n\n@dataclass\nclass Item:\n    tags: list = []",
+          "options": [
+            "ValueError at class definition",
+            "Works; each Item gets its own list",
+            "Works; each Item shares the same list",
+            "TypeError on first Item()"
+          ],
+          "answer": 0,
+          "explanation": "`dataclass` refuses mutable defaults of type list, dict or set and raises `ValueError` when the class is created, to stop the shared-default bug. Use `field(default_factory=list)`."
+        },
+        {
+          "id": "l2-q6",
+          "prompt": "What does this print?",
+          "code": "class Quiet:\n    def __enter__(self):\n        return self\n    def __exit__(self, exc_type, exc, tb):\n        return True\n\nwith Quiet():\n    1 / 0\nprint(\"after\")",
+          "options": [
+            "ZeroDivisionError traceback",
+            "RuntimeError",
+            "Nothing",
+            "after"
+          ],
+          "answer": 3,
+          "explanation": "If `__exit__` returns a truthy value, the exception is suppressed and execution continues after the `with` block. That is how `contextlib.suppress` works. Returning `True` by accident hides real errors."
+        },
+        {
+          "id": "l2-q7",
+          "prompt": "What happens on the last line?",
+          "code": "class Slotted:\n    __slots__ = ('x',)\n\ns = Slotted()\ns.x = 1\ns.y = 2",
+          "options": [
+            "s.y is set normally",
+            "s.y is silently ignored",
+            "TypeError",
+            "AttributeError"
+          ],
+          "answer": 3,
+          "explanation": "`__slots__` replaces the per-instance `__dict__` with fixed storage, so you cannot add undeclared attributes. You get lower memory use and faster attribute access in exchange for flexibility. That trade-off matters when you hold millions of small objects."
+        },
+        {
+          "id": "l2-q8",
+          "prompt": "When is `__getattr__` called?",
+          "code": null,
+          "options": [
+            "On every attribute access",
+            "Only for attributes that start with an underscore",
+            "Only when normal attribute lookup fails",
+            "Only when setting an attribute"
+          ],
+          "answer": 2,
+          "explanation": "`__getattribute__` runs on every access. `__getattr__` is only a fallback for when the normal lookup raises AttributeError. Overriding `__getattribute__` is rarely needed and easy to get wrong (for example, infinite recursion)."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Functions, Closures & Generators",
+      "tagline": "Decorators, closures and lazy pipelines",
+      "topics": [
+        "decorators and functools.wraps",
+        "decorator evaluation order",
+        "nonlocal and closures",
+        "generator send / yield from",
+        "generator lifecycle",
+        "functools.lru_cache",
+        "parameter kinds"
+      ],
+      "questions": [
+        {
+          "id": "l3-q1",
+          "prompt": "What does this print?",
+          "code": "def deco(f):\n    def inner(*a, **k):\n        return f(*a, **k)\n    return inner\n\n@deco\ndef greet():\n    \"Say hi\"\n\nprint(greet.__name__)",
+          "options": [
+            "greet",
+            "deco",
+            "inner",
+            "None"
+          ],
+          "answer": 2,
+          "explanation": "Without `functools.wraps(f)`, the decorated name is bound to `inner` and loses its metadata (`__name__`, `__doc__`, `__qualname__`, `__wrapped__`). That breaks logging, debugging and tools that introspect functions."
+        },
+        {
+          "id": "l3-q2",
+          "prompt": "In what order are the lines printed?",
+          "code": "def tag(name):\n    print(\"factory\", name)\n    def deco(f):\n        print(\"decorate\", name)\n        return f\n    return deco\n\n@tag(\"a\")\n@tag(\"b\")\ndef f(): pass",
+          "options": [
+            "factory a, factory b, decorate b, decorate a",
+            "factory a, decorate a, factory b, decorate b",
+            "factory b, factory a, decorate b, decorate a",
+            "factory b, decorate b, factory a, decorate a"
+          ],
+          "answer": 0,
+          "explanation": "The decorator expressions are evaluated top to bottom (so both factories run first), then applied bottom up, starting with the decorator closest to the function. `@tag(\"a\") @tag(\"b\") def f` is `f = tag(\"a\")(tag(\"b\")(f))`, but both factory calls happen before either decorator is applied."
+        },
+        {
+          "id": "l3-q3",
+          "prompt": "What happens on the last line?",
+          "code": "def counter():\n    n = 0\n    def inc():\n        n += 1\n        return n\n    return inc\n\ncounter()()",
+          "options": [
+            "Returns 1",
+            "Returns 0",
+            "NameError",
+            "UnboundLocalError"
+          ],
+          "answer": 3,
+          "explanation": "`n += 1` assigns to `n`, which makes `n` local to `inc`, so it is read before being bound. Declare `nonlocal n` to rebind the enclosing variable. Mutating a captured object (such as a list) works without `nonlocal`."
+        },
+        {
+          "id": "l3-q4",
+          "prompt": "What does this print?",
+          "code": "def g():\n    x = yield 1\n    yield x * 2\n\nit = g()\nprint(next(it), it.send(5))",
+          "options": [
+            "1 10",
+            "1 2",
+            "5 10",
+            "TypeError"
+          ],
+          "answer": 0,
+          "explanation": "`next(it)` runs to the first `yield` and produces 1. `send(5)` resumes the generator, making the paused `yield` expression evaluate to 5, so `x = 5` and the next yield produces 10. This two-way protocol is the foundation coroutines were built on."
+        },
+        {
+          "id": "l3-q5",
+          "prompt": "What does this print?",
+          "code": "def inner():\n    yield 1\n    return \"done\"\n\ndef outer():\n    r = yield from inner()\n    yield r\n\nprint(list(outer()))",
+          "options": [
+            "[1]",
+            "[1, None]",
+            "['done']",
+            "[1, 'done']"
+          ],
+          "answer": 3,
+          "explanation": "`yield from` delegates to the subgenerator and evaluates to its `return` value (carried by `StopIteration.value`). It also forwards `send()` and `throw()` calls, which makes it far more than a loop over `yield`."
+        },
+        {
+          "id": "l3-q6",
+          "prompt": "What is printed?",
+          "code": "def g():\n    try:\n        yield 1\n        yield 2\n    finally:\n        print(\"cleanup\")\n\nit = g()\nprint(next(it))\nit.close()",
+          "options": [
+            "1",
+            "1, 2, cleanup",
+            "1 then cleanup",
+            "cleanup then 1"
+          ],
+          "answer": 2,
+          "explanation": "`close()` raises `GeneratorExit` at the paused `yield`, so `finally` blocks run. That is why generators can safely manage resources. A generator that is never closed or exhausted runs its cleanup only when it is garbage-collected."
+        },
+        {
+          "id": "l3-q7",
+          "prompt": "What happens on the last line?",
+          "code": "from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef total(xs):\n    return sum(xs)\n\ntotal([1, 2, 3])",
+          "options": [
+            "Returns 6 and caches it",
+            "TypeError: unhashable type: 'list'",
+            "Returns 6 but does not cache",
+            "ValueError"
+          ],
+          "answer": 1,
+          "explanation": "`lru_cache` stores results in a dict keyed by the arguments, so every argument must be hashable. Pass a tuple or frozenset instead. Also note that the cache holds strong references to its arguments and results, which can leak memory on long-lived processes."
+        },
+        {
+          "id": "l3-q8",
+          "prompt": "Given `def f(a, /, b, *, c): ...`, which call is valid?",
+          "code": null,
+          "options": [
+            "f(1, b=2, c=3)",
+            "f(1, 2, 3)",
+            "f(a=1, b=2, c=3)",
+            "f(1, c=3)"
+          ],
+          "answer": 0,
+          "explanation": "Parameters before `/` are positional-only, and parameters after `*` are keyword-only. So `a` must be positional, `c` must be a keyword, and `b` can be either. Library authors use this to keep parameter names free to change."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Concurrency & Performance",
+      "tagline": "Threads, processes, asyncio and where the time goes",
+      "topics": [
+        "the GIL",
+        "asyncio semantics",
+        "blocking the event loop",
+        "thread safety",
+        "multiprocessing and pickling",
+        "task lifetime",
+        "algorithmic complexity of builtins"
+      ],
+      "questions": [
+        {
+          "id": "l4-q1",
+          "prompt": "On standard CPython (with the GIL), you split a pure-Python, CPU-bound loop across 4 threads. What is the typical effect?",
+          "code": null,
+          "options": [
+            "About 4x faster",
+            "Roughly the same speed or slower",
+            "Deadlock",
+            "RuntimeError"
+          ],
+          "answer": 1,
+          "explanation": "The GIL lets only one thread execute Python bytecode at a time, so CPU-bound threads gain nothing and pay contention overhead. Use `multiprocessing` or `ProcessPoolExecutor`, native extensions that release the GIL, or the free-threaded build (3.13t and later)."
+        },
+        {
+          "id": "l4-q2",
+          "prompt": "What does this print?",
+          "code": "import asyncio\n\nasync def work(delay, value):\n    await asyncio.sleep(delay)\n    return value\n\nasync def main():\n    print(await asyncio.gather(work(0.2, 'a'), work(0.1, 'b')))\n\nasyncio.run(main())",
+          "options": [
+            "['b', 'a']",
+            "'b'",
+            "['a', 'b']",
+            "It depends on scheduling"
+          ],
+          "answer": 2,
+          "explanation": "`gather` returns results in the order the awaitables were passed, regardless of which finishes first. To process results in completion order, use `asyncio.as_completed`."
+        },
+        {
+          "id": "l4-q3",
+          "prompt": "Three tasks are gathered, and each calls `time.sleep(1)` (not `asyncio.sleep`). Roughly how long does `gather` take?",
+          "code": "async def job():\n    time.sleep(1)\n\nawait asyncio.gather(job(), job(), job())",
+          "options": [
+            "~3 seconds",
+            "~1 second",
+            "~0 seconds",
+            "It raises RuntimeError"
+          ],
+          "answer": 0,
+          "explanation": "`time.sleep` blocks the entire event loop thread, so the tasks run one after another. Blocking calls inside coroutines are among the most common asyncio bugs. Use `await asyncio.sleep`, an async library, or `asyncio.to_thread` for blocking I/O."
+        },
+        {
+          "id": "l4-q4",
+          "prompt": "What happens here?",
+          "code": "async def hello():\n    print(\"hi\")\n\nhello()",
+          "options": [
+            "Nothing prints; a 'coroutine was never awaited' RuntimeWarning appears",
+            "Prints hi",
+            "SyntaxError",
+            "Prints hi twice"
+          ],
+          "answer": 0,
+          "explanation": "Calling an `async def` function only creates a coroutine object. Nothing runs until it is awaited or scheduled (for example with `asyncio.run` or `create_task`). When the unawaited coroutine is garbage-collected, Python warns."
+        },
+        {
+          "id": "l4-q5",
+          "prompt": "Several threads run `counter += 1` on a shared global, without a lock. Which statement is correct?",
+          "code": null,
+          "options": [
+            "It is atomic because of the GIL",
+            "Python raises a race-condition error",
+            "Updates can be lost, because += is a read-modify-write across several bytecodes",
+            "Only the last thread's updates count"
+          ],
+          "answer": 2,
+          "explanation": "`+=` compiles to separate load, add and store steps, and a thread switch can happen between them. The GIL protects the interpreter's internals, not your invariants. Use `threading.Lock`, `queue.Queue`, or avoid shared mutable state."
+        },
+        {
+          "id": "l4-q6",
+          "prompt": "What happens?",
+          "code": "from multiprocessing import Pool\n\nif __name__ == \"__main__\":\n    with Pool(4) as p:\n        print(p.map(lambda x: x * 2, range(5)))",
+          "options": [
+            "[0, 2, 4, 6, 8]",
+            "It deadlocks",
+            "A pickling error: lambdas can't be pickled",
+            "[0, 1, 2, 3, 4]"
+          ],
+          "answer": 2,
+          "explanation": "Work sent to worker processes is pickled, and pickle serialises functions by importable qualified name, which a lambda does not have. Use a module-level function. Remember that every argument and return value also crosses the process boundary through pickle."
+        },
+        {
+          "id": "l4-q7",
+          "prompt": "Why do the asyncio docs tell you to keep a reference to tasks created with `asyncio.create_task()`?",
+          "code": null,
+          "options": [
+            "To be able to cancel them later; nothing else",
+            "Tasks without references run synchronously",
+            "The event loop holds only weak references, so an unreferenced task can be garbage-collected mid-execution",
+            "To avoid a deadlock in gather"
+          ],
+          "answer": 2,
+          "explanation": "The loop keeps only weak references to tasks, so a fire-and-forget task can disappear before it finishes. Keep tasks in a set (and discard them with `add_done_callback`), or use `asyncio.TaskGroup` for structured concurrency."
+        },
+        {
+          "id": "l4-q8",
+          "prompt": "You check membership of 1M items against a list of 100k IDs. What is the best fix?",
+          "code": "ids = load_ids()  # list of 100_000\nhits = [x for x in items if x in ids]",
+          "options": [
+            "Convert ids to a set once: O(1) average lookups instead of O(n)",
+            "Sort the list first",
+            "Use a generator expression",
+            "Use threads"
+          ],
+          "answer": 0,
+          "explanation": "`x in list` is a linear scan, so this is O(n·m), around 10^11 comparisons. Building `set(ids)` once makes each lookup O(1) on average. Knowing the cost of builtin operations is a core senior skill."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Internals & Architecture",
+      "tagline": "The interpreter, the import system and designing for scale",
+      "topics": [
+        "reference counting and the cyclic GC",
+        "identity vs equality",
+        "class creation hooks",
+        "__new__ vs __init__",
+        "the import system",
+        "hash randomization",
+        "structural typing with Protocol"
+      ],
+      "questions": [
+        {
+          "id": "l5-q1",
+          "prompt": "Two objects reference each other, and you `del` your last external references to both. In CPython, when is their memory reclaimed?",
+          "code": null,
+          "options": [
+            "Later, by the cyclic garbage collector",
+            "Immediately, by reference counting",
+            "Never; it's a permanent leak",
+            "Only at interpreter shutdown"
+          ],
+          "answer": 0,
+          "explanation": "Reference counting frees most objects immediately, but a cycle keeps every count above zero. The generational cyclic collector (`gc` module) finds and frees unreachable cycles later. That is why cycles holding large buffers can cause latency spikes or memory bloat."
+        },
+        {
+          "id": "l5-q2",
+          "prompt": "Why is `x is None` preferred over `x == None`?",
+          "code": null,
+          "options": [
+            "None is a singleton, and `is` checks identity, which cannot be overridden, while `==` calls a possibly custom `__eq__`",
+            "It is a style rule only; the results are always identical",
+            "`==` raises for None",
+            "`is` converts types first"
+          ],
+          "answer": 0,
+          "explanation": "`==` dispatches to `__eq__`, which objects such as NumPy arrays or ORM columns override (they return arrays or expressions, not booleans). `is` is an identity check that cannot be customised, and it is guaranteed correct for singletons."
+        },
+        {
+          "id": "l5-q3",
+          "prompt": "What does this print?",
+          "code": "class Base:\n    registry = []\n    def __init_subclass__(cls, **kw):\n        super().__init_subclass__(**kw)\n        Base.registry.append(cls.__name__)\n\nclass A(Base): pass\nclass B(A): pass\nprint(Base.registry)",
+          "options": [
+            "['A']",
+            "['A', 'B']",
+            "['Base', 'A', 'B']",
+            "[]"
+          ],
+          "answer": 1,
+          "explanation": "`__init_subclass__` runs for every subclass in the hierarchy, including indirect ones, but not for the class that defines it. It covers most plugin-registry needs without writing a metaclass."
+        },
+        {
+          "id": "l5-q4",
+          "prompt": "If `__new__` returns an object that is not an instance of the class, what happens to `__init__`?",
+          "code": "class Weird:\n    def __new__(cls):\n        return 42\n    def __init__(self):\n        print(\"init\")\n\nw = Weird()",
+          "options": [
+            "__init__ runs, and 'init' is printed",
+            "__init__ is skipped, and w is 42",
+            "TypeError",
+            "w is a Weird instance"
+          ],
+          "answer": 1,
+          "explanation": "`type.__call__` only calls `__init__` when `__new__` returns an instance of the class (or a subclass). This is the mechanism behind singletons, caching constructors and immutable-type subclassing."
+        },
+        {
+          "id": "l5-q5",
+          "prompt": "Module `a` runs `from b import helper`, and module `b` runs `from a import config` at the top level. You run `import a`. What is the most likely outcome?",
+          "code": null,
+          "options": [
+            "Both imports succeed",
+            "SyntaxError",
+            "Infinite recursion",
+            "ImportError: cannot import name 'config' from partially initialized module 'a' (most likely due to a circular import)"
+          ],
+          "answer": 3,
+          "explanation": "`a` is placed in `sys.modules` before its body finishes. When `b` asks for `a.config`, the name doesn't exist yet. Fix the dependency structure: move shared code to a third module, import the module rather than the name, or defer the import."
+        },
+        {
+          "id": "l5-q6",
+          "prompt": "A service stores `hash(user_email)` in a database to look users up later. What's wrong?",
+          "code": null,
+          "options": [
+            "Nothing; hash() is stable",
+            "hash() is too slow",
+            "str hashes are randomized per process (PYTHONHASHSEED), so values change between runs",
+            "hash() only works on ints"
+          ],
+          "answer": 2,
+          "explanation": "Hash randomization (on by default since 3.3) protects dicts against collision DoS attacks, but it means `hash()` of str and bytes differs between processes. For persisted keys, use a stable digest such as `hashlib.sha256`."
+        },
+        {
+          "id": "l5-q7",
+          "prompt": "Which statement about `typing.Protocol` is correct?",
+          "code": null,
+          "options": [
+            "Classes must inherit from the Protocol to satisfy it",
+            "It is the same as an ABC",
+            "It enforces method signatures at runtime",
+            "It enables structural subtyping: any class with matching members satisfies it for type checkers, and isinstance() needs @runtime_checkable"
+          ],
+          "answer": 3,
+          "explanation": "Protocols describe the shape an object must have (duck typing that a type checker can verify) without requiring inheritance, which is ideal for decoupling modules. `@runtime_checkable` allows `isinstance` checks, but those only verify that the members exist, not their signatures."
+        },
+        {
+          "id": "l5-q8",
+          "prompt": "Module `m` contains a top-level `print(\"loaded\")`. How many times does \"loaded\" appear?",
+          "code": "import m\nimport m\nfrom m import *",
+          "options": [
+            "3",
+            "1",
+            "2",
+            "0"
+          ],
+          "answer": 1,
+          "explanation": "A module's code runs once. Later imports return the cached object from `sys.modules`. Only `importlib.reload` re-executes it. That is why module-level side effects (connections, config loading) deserve care."
+        }
+      ]
+    }
+  ],
+  "placement": [
+    {
+      "id": "p-1a",
+      "level": 1,
+      "prompt": "What does this print?",
+      "code": "a = [[0] * 2] * 2\na[0][0] = 1\nprint(a)",
+      "options": [
+        "[[1, 0], [0, 0]]",
+        "[[1, 0], [1, 0]]",
+        "[[1, 1], [0, 0]]",
+        "TypeError"
+      ],
+      "answer": 1,
+      "explanation": "`* 2` on the outer list repeats a reference to the same inner list. Use `[[0] * 2 for _ in range(2)]` to get independent rows."
+    },
+    {
+      "id": "p-1b",
+      "level": 1,
+      "prompt": "What does this print?",
+      "code": "x = [1, 2]\ny = x\nx = x + [3]\nprint(y)",
+      "options": [
+        "[1, 2, 3]",
+        "[3]",
+        "[1, 2]",
+        "None"
+      ],
+      "answer": 2,
+      "explanation": "`x + [3]` builds a new list and rebinds `x`, so `y` still refers to the original. `x += [3]` would mutate in place and `y` would see the change."
+    },
+    {
+      "id": "p-2a",
+      "level": 2,
+      "prompt": "What does this print?",
+      "code": "class Cart:\n    items = []\n\na, b = Cart(), Cart()\na.items.append(\"book\")\nprint(b.items)",
+      "options": [
+        "[]",
+        "AttributeError",
+        "['book']",
+        "None"
+      ],
+      "answer": 2,
+      "explanation": "`items` is a class attribute shared by all instances, and `append` mutates that shared list. Per-instance state belongs in `__init__`."
+    },
+    {
+      "id": "p-2b",
+      "level": 2,
+      "prompt": "What does this print?",
+      "code": "class Box:\n    def __len__(self):\n        return 0\n\nprint(bool(Box()))",
+      "options": [
+        "False",
+        "True",
+        "TypeError",
+        "0"
+      ],
+      "answer": 0,
+      "explanation": "Truth testing calls `__bool__` if it is defined, otherwise falls back to `__len__`, and otherwise treats the object as True. An empty container-like object is falsy."
+    },
+    {
+      "id": "p-3a",
+      "level": 3,
+      "prompt": "What does this print?",
+      "code": "fns = [lambda i=i: i for i in range(3)]\nprint([f() for f in fns])",
+      "options": [
+        "[2, 2, 2]",
+        "[0, 0, 0]",
+        "[0, 1, 2]",
+        "TypeError"
+      ],
+      "answer": 2,
+      "explanation": "Default values are evaluated at definition time, so `i=i` captures each loop value eagerly and avoids late binding in closures."
+    },
+    {
+      "id": "p-3b",
+      "level": 3,
+      "prompt": "What happens on the second line?",
+      "code": "def f(a, /, b): return a + b\nf(a=1, b=2)",
+      "options": [
+        "Returns 3",
+        "Returns None",
+        "SyntaxError",
+        "TypeError"
+      ],
+      "answer": 3,
+      "explanation": "`a` is positional-only (before `/`), so passing it by keyword raises TypeError."
+    },
+    {
+      "id": "p-4a",
+      "level": 4,
+      "prompt": "Your code is already running inside an event loop (for example, a FastAPI handler) and calls `asyncio.run(other())`. What happens?",
+      "code": null,
+      "options": [
+        "It runs other() to completion",
+        "RuntimeError: asyncio.run() cannot be called from a running event loop",
+        "It schedules other() in the background",
+        "It deadlocks silently"
+      ],
+      "answer": 1,
+      "explanation": "`asyncio.run` creates and owns a new event loop, which is not allowed while one is already running in the same thread. Inside async code, just `await other()` or create a task."
+    },
+    {
+      "id": "p-4b",
+      "level": 4,
+      "prompt": "You must make 10,000 concurrent HTTP calls that mostly wait on the network. Which approach scales best in a single process?",
+      "code": null,
+      "options": [
+        "10,000 OS threads",
+        "asyncio with an async HTTP client",
+        "multiprocessing with 10,000 processes",
+        "Sequential requests"
+      ],
+      "answer": 1,
+      "explanation": "I/O-bound fan-out suits asyncio: one thread can multiplex thousands of sockets at a far lower cost per connection than threads or processes."
+    },
+    {
+      "id": "p-5a",
+      "level": 5,
+      "prompt": "What does this print?",
+      "code": "print(type(type), isinstance(type, object), isinstance(object, type))",
+      "options": [
+        "<class 'type'> True False",
+        "TypeError",
+        "<class 'object'> True True",
+        "<class 'type'> True True"
+      ],
+      "answer": 3,
+      "explanation": "`type` is its own metaclass, and `type` and `object` are mutually entangled: every class (including `type`) is an object, and every class (including `object`) is an instance of `type`."
+    },
+    {
+      "id": "p-5b",
+      "level": 5,
+      "prompt": "In CPython, `sys.getrefcount(obj)` usually reports one more than you expect. Why?",
+      "code": null,
+      "options": [
+        "Passing obj as the argument creates a temporary reference",
+        "The garbage collector holds a reference",
+        "Small integers are cached",
+        "The interpreter counts from 1"
+      ],
+      "answer": 0,
+      "explanation": "The argument passed to `getrefcount` is itself a reference that lasts for the duration of the call, so the result is inflated by one."
+    }
+  ]
+}
