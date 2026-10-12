@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, Inter, JetBrains_Mono } from "next/font/google";
+import { Chakra_Petch, Exo_2, JetBrains_Mono } from "next/font/google";
 import { MotionProvider } from "@/components/MotionProvider";
 import "./globals.css";
 
@@ -8,7 +8,7 @@ const display = Chakra_Petch({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
-const body = Inter({ variable: "--font-body", subsets: ["latin"] });
+const body = Exo_2({ variable: "--font-body", subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 const code = JetBrains_Mono({ variable: "--font-code", subsets: ["latin"] });
 
 export const metadata: Metadata = {

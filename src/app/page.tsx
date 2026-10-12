@@ -64,10 +64,11 @@ export default async function Landing() {
           <h1 className="mt-6 font-display text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
             Ace your <span className="text-gradient">senior Python</span> interview.
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            AloAI is the way to ace senior Python technical interviews, with questions curated by expert Python
-            software engineers. Level up through game-style stages with <strong className="text-ink">Alo</strong>, your AI
-            tutor, at your side.
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink/80 sm:text-xl">
+            AloAI is the way to <strong className="font-semibold text-ink">ace senior Python technical interviews</strong>,
+            with questions <strong className="font-semibold text-gold">curated by expert Python software engineers</strong>.
+            Level up through game-style stages with <strong className="text-gradient font-bold">Alo</strong>, your AI tutor,
+            at your side.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link href={signedIn ? "/map" : "/signup"} className="btn btn-primary text-base">
