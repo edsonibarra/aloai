@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/session";
+import { clientIp, consume, LIMITS } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -13,6 +14,9 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter your email and password" }, { status: 400 });
+  }
+  if (!(await consume(`login:${await clientIp()}:${parsed.data.email}`, LIMITS.login))) {
+    return NextResponse.json({ error: "Too many attempts. Wait a few minutes and try again." }, { status: 429 });
   }
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
   const ok = user && (await bcrypt.compare(parsed.data.password, user.passwordHash));

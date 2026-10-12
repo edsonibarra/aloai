@@ -5,30 +5,52 @@ AloAI is the way to ace senior Python technical interviews, with questions curat
 ## Stack
 
 - **Next.js 15** (App Router) + TypeScript, Tailwind CSS v4, Framer Motion
-- **Prisma + SQLite** for users, progress, attempts and credits
+- **Prisma + PostgreSQL** (e.g. Neon) for users, progress, attempts, credits and rate limits
 - Email/password auth: bcrypt hashes and a signed, httpOnly JWT session cookie (`jose`)
 - **Claude API** (`@anthropic-ai/sdk`, model `claude-opus-5-5`) for Alo's level intros and answer feedback
 
-## Run it
+## Run it locally
+
+You need a Postgres database. A free [Neon](https://neon.tech) project works well (use a separate branch for dev).
 
 ```bash
 npm install                 # also runs `prisma generate`
-cp .env.example .env        # then set SESSION_SECRET and ANTHROPIC_API_KEY
-npm run db:setup            # creates prisma/dev.db
+cp .env.example .env        # set DATABASE_URL, DIRECT_URL, SESSION_SECRET, ANTHROPIC_API_KEY
+npm run db:setup            # applies migrations
 npm run dev                 # http://localhost:3000
 ```
-
-Production: `npm run build && npm start`.
 
 ### Environment
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | SQLite file, default `file:./dev.db` |
+| `DATABASE_URL` | Pooled Postgres connection string, used by the app at runtime |
+| `DIRECT_URL` | Direct (unpooled) Postgres connection string, used by migrations |
 | `SESSION_SECRET` | Random string, at least 32 characters, used to sign session cookies. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `ANTHROPIC_API_KEY` | Claude API key, used server-side only |
+| `ANTHROPIC_API_KEY` | Claude API key, scoped to a workspace. Server-side only |
 
-If Claude is unavailable (no key, a network error or a refusal), the app keeps working. Alo then shows a short static intro, and the expert's reference explanation in place of personalised feedback. These fallbacks are not cached, so live text appears once a key is set.
+If Claude is unavailable (no key, a network error, a refusal, or the user's hourly limit), the app keeps working. Alo then shows a short static intro, and the expert's reference explanation in place of personalised feedback.
+
+## Deploy to Vercel
+
+1. **Import the repo:** in Vercel, choose *Add New → Project*, then pick `edsonibarra/aloai`. The framework preset is Next.js.
+2. **Add a database:** in the project, go to *Storage → Neon (Postgres)* and connect it to *all environments*. This sets `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+3. **Set the remaining environment variables** in *Settings → Environment Variables*, for Production (and Preview if you use previews):
+   - `DIRECT_URL`: the same value as `DATABASE_URL_UNPOOLED`
+   - `SESSION_SECRET`: a new random value. Don't reuse the dev one.
+   - `ANTHROPIC_API_KEY`: your workspace key
+4. **Deploy.** The `vercel-build` script runs `prisma migrate deploy` on **production** deploys only, so preview builds never migrate the production database.
+5. **Check health:** `https://<your-domain>/api/health` should return `{"status":"ok"}`. Point your uptime monitor at it.
+
+## Production safeguards
+
+- **Rate limits**, stored in Postgres so they hold across serverless instances (`src/lib/rate-limit.ts`):
+  - 10 log-in attempts per IP + email per 15 minutes
+  - 5 sign-ups per IP per hour
+  - 120 Claude calls per user per hour; over the limit, Alo falls back to the expert's explanation
+- **Claude spend:** each answer gets at most one feedback call, because the result is stored in `AnswerFeedback`. Level intros are generated once and shared by every user.
+- **Security headers** (`next.config.ts`): CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, Referrer-Policy and Permissions-Policy.
+- **Sessions:** httpOnly, `SameSite=Lax` cookies, marked `Secure` in production.
 
 ## How it works
 
@@ -53,7 +75,7 @@ If Claude is unavailable (no key, a network error or a refusal), the app keeps w
 **Alo + Claude** (in `src/lib/alo.ts`)
 
 - **Level intros:** generated once per level, then cached in the `AloIntroCache` table and shared by all users.
-- **Answer feedback:** generated per answer, and only after the answer has been recorded, so Alo can't be used to leak answers.
+- **Answer feedback:** generated once per answer and stored in `AnswerFeedback`. It is only generated after the answer has been recorded, so Alo can't be used to leak answers.
 - **Refusals:** requests use the API's server-side refusal fallback (`fallbacks: "default"`).
 
 ## Question content

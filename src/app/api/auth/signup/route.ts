@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/session";
+import { clientIp, consume, LIMITS } from "@/lib/rate-limit";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Tell Alo your name").max(60),
@@ -11,6 +12,9 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!(await consume(`signup:${await clientIp()}`, LIMITS.signup))) {
+    return NextResponse.json({ error: "Too many sign-ups from this network. Try again later." }, { status: 429 });
+  }
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });

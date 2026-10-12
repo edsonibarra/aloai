@@ -3,19 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection, used by the app at runtime
+  directUrl = env("DIRECT_URL") // direct connection, used by migrations
 }
 
 model User {
-  id            String          @id @default(cuid())
-  email         String          @unique
+  id            String           @id @default(cuid())
+  email         String           @unique
   name          String
   passwordHash  String
-  credits       Int             @default(0)
-  placementDone Boolean         @default(false)
+  credits       Int              @default(0)
+  placementDone Boolean          @default(false)
   startLevel    Int?
-  createdAt     DateTime        @default(now())
+  createdAt     DateTime         @default(now())
   levels        LevelProgress[]
   attempts      LevelAttempt[]
   questionWins  QuestionCredit[]
@@ -23,26 +24,37 @@ model User {
 
 // One row per level the user has unlocked. A missing row means the level is locked.
 model LevelProgress {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
   level     Int
-  status    String  // "unlocked" | "completed"
-  bestScore Int     @default(0)
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String // "unlocked" | "completed"
+  bestScore Int    @default(0)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, level])
 }
 
 // A single run through a level's questions.
 model LevelAttempt {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
   level     Int
-  answers   String   @default("{}") // JSON: { [questionId]: { choice, correct } }
-  finished  Boolean  @default(false)
-  passed    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers   String           @default("{}") // JSON: { [questionId]: { choice, correct } }
+  finished  Boolean          @default(false)
+  passed    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedback  AnswerFeedback[]
+}
+
+// Alo's feedback for one answer in an attempt, stored so each answer costs at most one Claude call.
+model AnswerFeedback {
+  attemptId  String
+  questionId String
+  text       String
+  attempt    LevelAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@id([attemptId, questionId])
 }
 
 // Records the first time a user passes a question, so credits are only awarded once.
@@ -60,4 +72,11 @@ model AloIntroCache {
   level     Int      @id
   text      String
   createdAt DateTime @default(now())
+}
+
+// Fixed-window rate limit counters, shared by all server instances.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
 }

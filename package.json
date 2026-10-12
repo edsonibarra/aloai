@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:setup": "prisma migrate deploy",
+    "vercel-build": "prisma generate && if [ \"$VERCEL_ENV\" = \"production\" ]; then prisma migrate deploy; fi && next build",
     "postinstall": "prisma generate"
   },
   "dependencies": {

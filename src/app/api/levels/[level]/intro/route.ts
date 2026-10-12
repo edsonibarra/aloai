@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getLevel } from "@/lib/content";
 import { canAccessLevel } from "@/lib/progress";
 import { generateLevelIntro } from "@/lib/alo";
+import { consume, LIMITS } from "@/lib/rate-limit";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ level: string }> }) {
   const user = await getCurrentUser();
@@ -18,7 +19,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ level: 
   const cached = await prisma.aloIntroCache.findUnique({ where: { level: levelId } });
   if (cached) return NextResponse.json({ text: cached.text, live: true });
 
-  const text = await generateLevelIntro(level);
+  const allowed = await consume(`alo:${user.id}`, LIMITS.alo);
+  const text = allowed ? await generateLevelIntro(level) : null;
   if (!text) {
     // Claude unavailable: fall back to a short static intro, and don't cache it.
     return NextResponse.json({
