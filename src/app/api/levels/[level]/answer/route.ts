@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getLevel, LEVEL_COUNT } from "@/lib/content";
-import { getLevelAccess, paywallFor } from "@/lib/progress";
+import { canPlayLevels, getLevelAccess } from "@/lib/progress";
 import { CREDITS_PER_LEVEL, CREDITS_PER_QUESTION, PASS_THRESHOLD, type AttemptAnswers } from "@/lib/game";
 
 const schema = z.object({
@@ -117,10 +117,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ level: 
 
   if ("error" in result) return NextResponse.json(result, { status: 409 });
   if (result.levelResult?.unlockedLevel) {
-    const allowed = await paywallFor(user);
     return NextResponse.json({
       ...result,
-      levelResult: { ...result.levelResult, nextPlayable: allowed(result.levelResult.unlockedLevel) },
+      levelResult: { ...result.levelResult, nextPlayable: await canPlayLevels(user) },
     });
   }
   return NextResponse.json(result);

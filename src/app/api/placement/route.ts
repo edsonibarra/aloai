@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { getLevel, getPlacement, LEVEL_COUNT } from "@/lib/content";
 import { startLevelFromPlacement } from "@/lib/game";
+import { canPlayLevels } from "@/lib/progress";
 
 const schema = z.object({ answers: z.record(z.string(), z.number().int().min(0)) });
 
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     startLevel,
+    needsPass: !(await canPlayLevels(user)),
     levelTitle: getLevel(startLevel)?.title,
     score: results.filter((r) => r.correct).length,
     total: results.length,

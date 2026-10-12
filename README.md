@@ -54,7 +54,7 @@ If Claude is unavailable (no key, a network error, a refusal, or the user's hour
 
 ## Payments (Stripe)
 
-The placement test and each user's **starting level** are free. A one-time **Interview Pass** unlocks every other level. Credits are game rewards only; they can't be bought.
+Only the **placement test** is free. A one-time **Interview Pass** unlocks every level, including the user's starting level. Credits are game rewards only; they can't be bought.
 
 **Billing stays off until `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` are all set.** While it's off, every unlocked level stays playable and the pricing page shows "Coming soon".
 
@@ -85,7 +85,7 @@ The placement test and each user's **starting level** are free. A one-time **Int
 | `/signup`, `/login` | Authentication |
 | `/placement` | 10-question placement test, 2 questions per level. Can only be taken once |
 | `/map` | Level map: cleared, current, Pro (needs the Pass) and sealed levels, plus the credit HUD |
-| `/pricing` | Free vs. Interview Pass; starts Stripe Checkout |
+| `/pricing` | The Interview Pass; starts Stripe Checkout |
 | `/billing/success` | Waits for the webhook, then plays the Pass-unlock moment |
 | `/terms` | Terms and refund policy |
 | `/level/[n]` | Alo's "why this level matters" briefing, 8 questions with Alo's feedback, reward moments and the level result |

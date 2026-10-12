@@ -27,10 +27,10 @@ export default async function PricingPage({
   const questionCount = levels.reduce((n, l) => n + l.questions.length, 0);
 
   const aloLine = params.canceled
-    ? "No problem, checkout was canceled and you weren't charged. Your free level is still yours, and the Pass will be here whenever you're ready."
+    ? "No problem, checkout was canceled and you weren't charged. Your placement result is saved, and the Pass will be here whenever you're ready."
     : wanted
       ? `Level ${wanted.id}, ${wanted.title}, is part of the Interview Pass. One payment unlocks it and every other level for good, so you can play, replay and master all of it.`
-      : "Your placement test and starting level are free. When you're ready to go all the way, the Interview Pass unlocks every level with one payment. No subscription.";
+      : "Take the placement test free to find your level. Then the Interview Pass unlocks every level with one payment. No subscription.";
 
   return (
     <div className="relative min-h-dvh">
@@ -49,7 +49,7 @@ export default async function PricingPage({
             Unlock the <span className="text-gradient">whole quest</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-ink/80">
-            Start free. When you&apos;re ready to ace the senior Python interview, one payment unlocks every level.
+            One payment unlocks every level of the quest to ace the senior Python interview.
           </p>
         </FadeIn>
 
@@ -57,22 +57,7 @@ export default async function PricingPage({
           <AloSpeech size={110} mood={params.canceled ? "encouraging" : "happy"} text={aloLine} />
         </FadeIn>
 
-        <div className="mt-10 grid items-stretch gap-6 md:grid-cols-2">
-          {/* Free */}
-          <FadeIn delay={0.15} className="panel flex flex-col p-6 sm:p-8">
-            <div className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-cyan">Starter</div>
-            <div className="mt-3 font-display text-5xl font-bold">Free</div>
-            <p className="mt-2 text-muted">Find your level and try the real thing.</p>
-            <ul className="mt-6 flex-1 space-y-3 text-ink/90">
-              {["Placement test to find your seniority level", "Your starting level, fully playable", "Alo's briefings and feedback", "Credits for every question you pass"].map((f) => (
-                <Feature key={f} text={f} tone="text-cyan" />
-              ))}
-            </ul>
-            <Link href={user ? "/map" : "/signup"} className="btn btn-secondary mt-8 w-full">
-              {user ? "Go to the map" : "Start free"}
-            </Link>
-          </FadeIn>
-
+        <div className="mx-auto mt-10 max-w-md">
           {/* Interview Pass */}
           <FadeIn delay={0.25} className="relative">
             <div aria-hidden className="absolute -inset-[2px] rounded-[24px] bg-[conic-gradient(from_180deg,var(--gold),var(--pink),var(--violet),var(--cyan),var(--gold))] opacity-80 blur-[1px]" />
@@ -93,6 +78,7 @@ export default async function PricingPage({
                 {[
                   `All ${levels.length} levels and ${questionCount}+ expert-curated questions`,
                   "Every level from core semantics to interpreter internals",
+                  "Alo's briefing on why each level matters",
                   "Replay any level, any time",
                   "Alo's personalised feedback on every answer",
                 ].map((f) => (
@@ -115,6 +101,14 @@ export default async function PricingPage({
                     Sign up to get the Pass
                   </Link>
                 )}
+                {!owned && (
+                  <p className="mt-3 text-center text-sm text-ink/80">
+                    Not sure yet?{" "}
+                    <Link href={user ? "/map" : "/signup"} className="focus-ring rounded font-semibold text-cyan hover:underline">
+                      {user ? "Back to the map" : "Take the placement test free"}
+                    </Link>
+                  </p>
+                )}
                 <p className="mt-3 text-center text-xs text-muted">
                   Secure payment by Stripe · 14-day refund policy ·{" "}
                   <Link href="/terms" className="focus-ring rounded underline hover:text-ink">
@@ -131,7 +125,7 @@ export default async function PricingPage({
           <dl className="mt-6 space-y-4">
             {[
               ["Is this a subscription?", "No. You pay once and keep access to every level."],
-              ["Which level is free?", "The level the placement test assigns you. Everything else is unlocked by the Pass, as you progress."],
+              ["Is anything free?", "Yes, the placement test. It finds your level so you know exactly where the Pass will start you."],
               ["Can I buy credits?", "No. Credits are rewards Alo gives you for passing questions and levels. They can only be earned."],
               ["What if it's not for me?", "Ask for a refund within 14 days of purchase and you'll get your money back in full. See the Terms for details."],
             ].map(([q, a]) => (

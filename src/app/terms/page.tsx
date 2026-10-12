@@ -50,7 +50,7 @@ export default function TermsPage() {
           <Section title="Refunds">
             If the Pass isn&apos;t right for you, request a refund within 14 days of purchase by contacting {contact}. We
             refund the full amount to your original payment method. A refunded purchase removes the Pass from your account.
-            Your progress and credits are kept, along with access to your free level.
+            Your progress and credits are kept.
           </Section>
 
           <Section title="Content">

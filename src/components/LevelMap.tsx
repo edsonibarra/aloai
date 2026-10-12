@@ -44,7 +44,7 @@ export function LevelMap({ nodes, name, passAvailable }: { nodes: MapNode[]; nam
           allDone
             ? `${name}, you've cleared every level! You've worked through the full senior Python gauntlet curated by expert engineers. Walk into that interview like you own it.`
             : current && current.status !== "locked" && currentIsPro
-              ? `Great work, ${name}! You've cleared your free level. Level ${current.id}, ${current.title}, is next. Grab the Interview Pass to unlock it and every remaining level, all curated by expert Python software engineers.`
+              ? `Welcome to the map, ${name}! Level ${current.id}, ${current.title}, is where your quest begins. The Interview Pass unlocks it and every level after it, all curated by expert Python software engineers.`
               : current && current.status !== "locked"
                 ? `Welcome to the map, ${name}! Level ${current.id}, ${current.title}, is open and waiting. Clear it with at least 6 of 8 correct to unseal the next one. Every question you pass earns credits.`
                 : `Welcome back, ${name}! Pick a level to continue.`

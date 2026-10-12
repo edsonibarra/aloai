@@ -12,6 +12,7 @@ import { QuestionCard, type PublicQuestion } from "./QuestionCard";
 
 type Result = {
   startLevel: number;
+  needsPass: boolean;
   levelTitle: string;
   score: number;
   total: number;
@@ -207,14 +208,27 @@ function PlacementResult({ result }: { result: Result }) {
           size={100}
           mood="happy"
           text={
-            result.startLevel > 1
-              ? `Impressive! You've earned your place at Level ${result.startLevel}. I've marked the earlier levels as cleared, so you can jump straight to the content that will move you forward. Ready to climb?`
-              : "Great start! Level 1 is where we'll build the rock-solid foundations senior interviewers test first. Clear it and the next level unlocks. I'll be with you on every question."
+            result.needsPass
+              ? `${result.startLevel > 1 ? `Impressive! You've earned your place at Level ${result.startLevel}.` : "Great start! Level 1 is where we'll build the foundations senior interviewers test first."} Your path is ready. The Interview Pass unlocks Level ${result.startLevel} and every level after it, with one payment, and I'll be with you on every question.`
+              : result.startLevel > 1
+                ? `Impressive! You've earned your place at Level ${result.startLevel}. I've marked the earlier levels as cleared, so you can jump straight to the content that will move you forward. Ready to climb?`
+                : "Great start! Level 1 is where we'll build the rock-solid foundations senior interviewers test first. Clear it and the next level unlocks. I'll be with you on every question."
           }
           footer={
-            <Link href="/map" className="btn btn-primary">
-              Enter the level map
-            </Link>
+            result.needsPass ? (
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/pricing?level=${result.startLevel}`} className="btn btn-primary">
+                  Unlock level {result.startLevel}
+                </Link>
+                <Link href="/map" className="btn btn-secondary">
+                  See the map
+                </Link>
+              </div>
+            ) : (
+              <Link href="/map" className="btn btn-primary">
+                Enter the level map
+              </Link>
+            )
           }
         />
       </motion.div>

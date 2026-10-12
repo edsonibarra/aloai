@@ -12,28 +12,22 @@ export async function getLevelStatuses(userId: string): Promise<Map<number, Leve
 /**
  * Whether a user may play a level. Two independent locks:
  * 1. Progress: the level must be unlocked (a LevelProgress row exists).
- * 2. Paywall: the user's starting level is free; every other level needs the Interview Pass.
+ * 2. Paywall: every level needs the Interview Pass. Only the placement test is free.
  */
 export type LevelAccess = "locked" | "paywalled" | "playable";
 
-export function isFreeLevel(startLevel: number | null, level: number): boolean {
-  return startLevel !== null && level === startLevel;
-}
-
-/** Resolves the paywall once per request, for checking several levels. */
-export async function paywallFor(user: { id: string; startLevel: number | null }) {
-  const unrestricted = !billingEnabled() || (await hasPass(user.id));
-  return (level: number) => unrestricted || isFreeLevel(user.startLevel, level);
+/** The paywall: true when billing is off or the user owns the Interview Pass. */
+export async function canPlayLevels(user: { id: string }): Promise<boolean> {
+  return !billingEnabled() || (await hasPass(user.id));
 }
 
 export async function getLevelAccess(
-  user: { id: string; startLevel: number | null },
+  user: { id: string },
   level: number,
 ): Promise<LevelAccess> {
   const row = await prisma.levelProgress.findUnique({
     where: { userId_level: { userId: user.id, level } },
   });
   if (!row) return "locked";
-  const allowed = await paywallFor(user);
-  return allowed(level) ? "playable" : "paywalled";
+  return (await canPlayLevels(user)) ? "playable" : "paywalled";
 }

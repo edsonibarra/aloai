@@ -416,7 +416,7 @@ function LevelResultScreen({
                 ? isFinalLevel
                   ? `You did it! Every level cleared. Here are ${CREDITS_PER_LEVEL} credits for conquering the final level. You now think about Python the way senior interviewers hope candidates will.`
                   : nextNeedsPass
-                  ? `Outstanding! I'm awarding you ${CREDITS_PER_LEVEL} bonus credits for clearing ${level.title}. That was your free level. Level ${unlockedLevel} and beyond go deeper into what senior interviewers probe, and the Interview Pass unlocks all of them for good.`
+                  ? `Outstanding! I'm awarding you ${CREDITS_PER_LEVEL} bonus credits for clearing ${level.title}. Level ${unlockedLevel} is next, and the Interview Pass unlocks it and every level after it.`
                   : `Outstanding! I'm awarding you ${CREDITS_PER_LEVEL} bonus credits for clearing ${level.title}. Level ${unlockedLevel} is now unsealed. Let's keep the streak going!`
                 : `Great replay! You've already claimed this level's bonus, but that ${score}/${total} shows the knowledge is sticking.`
               : `You got ${score} of ${total}. You need ${PASS_THRESHOLD} to clear this level. Every miss shows you exactly what an interviewer might catch, so review my notes and try again. You'll get it.`

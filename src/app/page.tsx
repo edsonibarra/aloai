@@ -174,13 +174,13 @@ export default async function Landing() {
             Your next interview is a <span className="text-gold-gradient">boss level</span>.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted">
-            Train for it with questions from the engineers who ask them. Your placement test and starting level are free.{" "}
+            Train for it with questions from the engineers who ask them. The placement test is free.{" "}
             <Link href="/pricing" className="focus-ring rounded font-semibold text-gold hover:underline">
               See pricing
             </Link>
           </p>
           <Link href={signedIn ? "/map" : "/signup"} className="btn btn-primary mt-8 text-base">
-            {signedIn ? "Back to the map" : "Create free account"}
+            {signedIn ? "Back to the map" : "Find your level free"}
           </Link>
         </FadeIn>
       </section>
